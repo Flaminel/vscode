@@ -26,7 +26,7 @@ import { Action2, MenuId } from '../../../platform/actions/common/actions.js';
 import { Categories } from '../../../platform/action/common/actionCommonCategories.js';
 import { KeyCode, KeyMod } from '../../../base/common/keyCodes.js';
 import { KeybindingWeight } from '../../../platform/keybinding/common/keybindingsRegistry.js';
-import { isMacintosh } from '../../../base/common/platform.js';
+import { isMacintosh, isWindows } from '../../../base/common/platform.js';
 import { getActiveWindow } from '../../../base/browser/dom.js';
 import { IOpenedAuxiliaryWindow, IOpenedMainWindow, isOpenedAuxiliaryWindow } from '../../../platform/window/common/window.js';
 import { IsAuxiliaryWindowContext, IsWindowAlwaysOnTopContext } from '../../common/contextkeys.js';
@@ -433,7 +433,7 @@ export class FocusWindowAction extends Action2 {
 }
 
 function canRunNativeTabsHandler(accessor: ServicesAccessor): boolean {
-	if (!isMacintosh) {
+	if (!isMacintosh && !isWindows) {
 		return false;
 	}
 

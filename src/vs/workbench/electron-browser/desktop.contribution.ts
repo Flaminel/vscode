@@ -90,8 +90,8 @@ import product from '../../platform/product/common/product.js';
 		linux: { primary: KeyMod.CtrlCmd | KeyCode.KeyQ }
 	});
 
-	// Actions: macOS Native Tabs
-	if (isMacintosh) {
+	// Actions: Native Tabs
+	if (isMacintosh || isWindows) {
 		for (const command of [
 			{ handler: NewWindowTabHandler, id: 'workbench.action.newWindowTab', title: localize2('newTab', 'New Window Tab') },
 			{ handler: ShowPreviousWindowTabHandler, id: 'workbench.action.showPreviousWindowTab', title: localize2('showPreviousTab', 'Show Previous Window Tab') },
@@ -99,7 +99,7 @@ import product from '../../platform/product/common/product.js';
 			{ handler: MoveWindowTabToNewWindowHandler, id: 'workbench.action.moveWindowTabToNewWindow', title: localize2('moveWindowTabToNewWindow', 'Move Window Tab to New Window') },
 			{ handler: MergeWindowTabsHandlerHandler, id: 'workbench.action.mergeAllWindowTabs', title: localize2('mergeAllWindowTabs', 'Merge All Windows') },
 			{ handler: ToggleWindowTabsBarHandler, id: 'workbench.action.toggleWindowTabsBar', title: localize2('toggleWindowTabsBar', 'Toggle Window Tabs Bar') }
-		]) {
+		].filter(command => isMacintosh || command.id === 'workbench.action.newWindowTab')) {
 			CommandsRegistry.registerCommand(command.id, command.handler);
 
 			MenuRegistry.appendMenuItem(MenuId.CommandPalette, {
@@ -299,8 +299,8 @@ import product from '../../platform/product/common/product.js';
 				'type': 'boolean',
 				'default': false,
 				'scope': ConfigurationScope.APPLICATION,
-				'description': localize('window.nativeTabs', "Enables macOS native window tabs. Note that changes require a full restart to apply and that native tabs will disable a custom title bar style if configured."),
-				'included': isMacintosh,
+				'description': localize('window.nativeTabs', "Enables native window tabs on macOS and window tabs on Windows. Note that changes require a full restart to apply. On macOS, native tabs will disable a custom title bar style if configured."),
+				'included': isMacintosh || isWindows,
 			},
 			'window.nativeFullScreen': {
 				'type': 'boolean',

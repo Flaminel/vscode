@@ -39,6 +39,7 @@ import { getRemoteAuthority } from '../../remote/common/remoteHosts.js';
 import { IStateService } from '../../state/node/state.js';
 import { AgentsWindowOpenSource, IAgentsWindowDraft, IAddRemoveFoldersRequest, INativeOpenFileRequest, INativeWindowConfiguration, IOpenEmptyWindowOptions, IPath, IPathsToWaitFor, isFileToOpen, isFolderToOpen, isWorkspaceToOpen, IWindowFolderLocation, IWindowOpenable, IWindowSettings } from '../../window/common/window.js';
 import { CodeWindow } from './windowImpl.js';
+import { WindowTabs } from './windowTabs.js';
 import { IOpenConfiguration, IOpenEmptyConfiguration, IWindowsCountChangedEvent, IWindowsMainService, OpenContext, getLastFocused } from './windows.js';
 import { findWindowOnExtensionDevelopmentPath, findWindowOnFile, findWindowOnRequestedPath, findWindowOnWorkspaceOrFolder } from './windowsFinder.js';
 import { IFolderLocationsMainService, IValidatedFolderLocation } from './folderLocationsMainService.js';
@@ -218,6 +219,7 @@ export class WindowsMainService extends Disposable implements IWindowsMainServic
 	readonly onDidTriggerSystemContextMenu = this._onDidTriggerSystemContextMenu.event;
 
 	private readonly windows = new Map<number, ICodeWindow>();
+	private readonly windowTabs = new WindowTabs();
 
 	private readonly windowsStateHandler: WindowsStateHandler;
 
@@ -1689,7 +1691,13 @@ export class WindowsMainService extends Disposable implements IWindowsMainServic
 			// Add as window tab if configured (macOS only)
 			if (options.forceNewTabbedWindow) {
 				const activeWindow = this.getLastActiveWindow();
-				activeWindow?.addTabbedWindow(createdWindow);
+				if (isWindows) {
+					if (activeWindow) {
+						this.windowTabs.addTab(activeWindow, createdWindow);
+					}
+				} else {
+					activeWindow?.addTabbedWindow(createdWindow);
+				}
 			}
 
 			// Add to our list of windows
@@ -1832,6 +1840,7 @@ export class WindowsMainService extends Disposable implements IWindowsMainServic
 
 		// Remove from our list so that Electron can clean it up
 		this.windows.delete(window.id);
+		this.windowTabs.remove(window);
 
 		// Emit
 		this._onDidChangeWindowsCount.fire({ oldCount: this.getWindowCount() + 1, newCount: this.getWindowCount() });

@@ -27,7 +27,7 @@ import { IEnvironmentMainService } from '../../environment/electron-main/environ
 import { createDecorator, IInstantiationService } from '../../instantiation/common/instantiation.js';
 import { ILifecycleMainService, IRelaunchOptions } from '../../lifecycle/electron-main/lifecycleMainService.js';
 import { ILogService } from '../../log/common/log.js';
-import { FocusMode, IApplicationBadge, ICommonNativeHostService, INativeAppWindow, INativeAppWindows, INativeHostOptions, INativeSystemWideKeybinding, INativeSystemWideKeybindingResult, INativeZipFile, INativeZipOptions, INativeZipProgress, INativeZipResult, IOpenAgentsWindowOptions, IOSProperties, IOSProxy, IOSProxyConfig, IOSStatistics, IStartTracingOptions, IToastOptions, IToastResult, PowerSaveBlockerType, SystemIdleState, ThermalState } from '../common/native.js';
+import { FocusMode, IApplicationBadge, ICommonNativeHostService, INativeAppWindow, INativeAppWindows, INativeHostOptions, INativeSystemWideKeybinding, INativeSystemWideKeybindingResult, INativeZipFile, INativeZipOptions, INativeZipProgress, INativeZipResult, IOpenAgentsWindowOptions, IOSProperties, IOSProxy, IOSProxyConfig, IOSStatistics, IStartTracingOptions, IToastOptions, IWindowTabInfo, IToastResult, PowerSaveBlockerType, SystemIdleState, ThermalState } from '../common/native.js';
 import { excludeOwnWindowSources, getScreenWindowId, getWindowSourceId, OrderedAppWindow, orderAppWindows } from '../common/appWindows.js';
 import { AppWindowCaptureFeedback, IAppWindowCaptureFeedbackOptions, IAppWindowCaptureOverlay } from './appWindowCaptureFeedback.js';
 import { captureMacWindow, getMacScreenWindows } from './macScreenWindows.js';
@@ -134,6 +134,8 @@ export class NativeHostMainService extends Disposable implements INativeHostMain
 				Event.map(this.auxiliaryWindowsMainService.onDidChangeAlwaysOnTop, e => ({ windowId: e.window.id, alwaysOnTop: e.alwaysOnTop }))
 			);
 
+			this.onDidChangeWindowTabs = this.windowsMainService.windowTabs.onDidChange;
+
 			this.onDidBlurMainWindow = Event.filter(Event.fromNodeEventEmitter(app, 'browser-window-blur', (event, window: BrowserWindow) => window.id), windowId => !!this.windowsMainService.getWindowById(windowId));
 			this.onDidFocusMainWindow = Event.any(
 				Event.map(Event.filter(Event.map(this.windowsMainService.onDidChangeWindowsCount, () => this.windowsMainService.getLastActiveWindow()), window => !!window), window => window!.id),
@@ -216,6 +218,8 @@ export class NativeHostMainService extends Disposable implements INativeHostMain
 	readonly onDidFocusMainOrAuxiliaryWindow: Event<number>;
 
 	readonly onDidChangeWindowAlwaysOnTop: Event<{ readonly windowId: number; readonly alwaysOnTop: boolean }>;
+
+	readonly onDidChangeWindowTabs: Event<void>;
 
 	readonly onDidSuspendOS: Event<void>;
 	readonly onDidResumeOS: Event<void>;
@@ -481,6 +485,26 @@ export class NativeHostMainService extends Disposable implements INativeHostMain
 	async isWindowAlwaysOnTop(windowId: number | undefined, options?: INativeHostOptions): Promise<boolean> {
 		const window = this.windowById(options?.targetWindowId, windowId);
 		return window?.win?.isAlwaysOnTop() ?? false;
+	}
+
+	async getWindowTabs(windowId: number | undefined): Promise<IWindowTabInfo[]> {
+		const window = this.codeWindowById(windowId);
+		if (!window) {
+			return [];
+		}
+
+		return this.windowsMainService.windowTabs.getTabs(window).map(tab => ({
+			windowId: tab.id,
+			title: tab.win?.getTitle() ?? '',
+			active: tab === window
+		}));
+	}
+
+	async activateWindowTab(windowId: number | undefined, tabWindowId: number): Promise<void> {
+		const tab = this.windowsMainService.getWindowById(tabWindowId);
+		if (tab) {
+			this.windowsMainService.windowTabs.activate(tab);
+		}
 	}
 
 	async toggleWindowAlwaysOnTop(windowId: number | undefined, options?: INativeHostOptions): Promise<void> {

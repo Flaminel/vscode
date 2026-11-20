@@ -3,10 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../base/common/event.js';
+import { Emitter, Event } from '../../../base/common/event.js';
 import { ICodeWindow } from '../../window/electron-main/window.js';
 
 export class WindowTabs {
+
+	private readonly _onDidChange = new Emitter<void>();
+	readonly onDidChange = this._onDidChange.event;
 
 	private readonly groups: ICodeWindow[][] = [];
 
@@ -22,6 +25,7 @@ export class WindowTabs {
 		}
 
 		group.push(window);
+		this._onDidChange.fire();
 
 		this.matchBounds(anchor, window);
 
@@ -47,6 +51,8 @@ export class WindowTabs {
 				tab.win?.hide();
 			}
 		}
+
+		this._onDidChange.fire();
 	}
 
 	remove(window: ICodeWindow): void {
@@ -62,6 +68,8 @@ export class WindowTabs {
 		if (group.length <= 1) {
 			this.groups.splice(this.groups.indexOf(group), 1);
 		}
+
+		this._onDidChange.fire();
 
 		const next = group[Math.min(index, group.length - 1)];
 		if (wasVisible && next) {

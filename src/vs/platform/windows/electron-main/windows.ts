@@ -18,6 +18,7 @@ import { ILogService } from '../../log/common/log.js';
 import { IProductService } from '../../product/common/productService.js';
 import { IThemeMainService } from '../../theme/electron-main/themeMainService.js';
 import { AgentsWindowOpenSource, ChatSessionToOpen, IAgentsWindowDraft, IOpenEmptyWindowOptions, IWindowOpenable, IWindowSettings, TitlebarStyle, WindowMinimumSize, hasNativeTitlebar, useNativeFullScreen, useWindowControlsOverlay, zoomLevelToZoomFactor } from '../../window/common/window.js';
+import { WindowTabs } from './windowTabs.js';
 import { ICodeWindow, IWindowState, WindowMode, defaultWindowState } from '../../window/electron-main/window.js';
 
 export const IWindowsMainService = createDecorator<IWindowsMainService>('windowsMainService');
@@ -27,6 +28,8 @@ export interface IWindowsMainService {
 	readonly _serviceBrand: undefined;
 
 	readonly onDidChangeWindowsCount: Event<IWindowsCountChangedEvent>;
+
+	readonly windowTabs: WindowTabs;
 
 	readonly onDidOpenWindow: Event<ICodeWindow>;
 	readonly onDidSignalReadyWindow: Event<ICodeWindow>;

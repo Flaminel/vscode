@@ -219,7 +219,7 @@ export class WindowsMainService extends Disposable implements IWindowsMainServic
 	readonly onDidTriggerSystemContextMenu = this._onDidTriggerSystemContextMenu.event;
 
 	private readonly windows = new Map<number, ICodeWindow>();
-	private readonly windowTabs = new WindowTabs();
+	readonly windowTabs = new WindowTabs();
 
 	private readonly windowsStateHandler: WindowsStateHandler;
 

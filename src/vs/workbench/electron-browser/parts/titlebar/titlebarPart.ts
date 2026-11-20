@@ -18,7 +18,7 @@ import { BrowserTitlebarPart, BrowserTitleService, IAuxiliaryTitlebarPart } from
 import { IContextMenuService } from '../../../../platform/contextview/browser/contextView.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { IWorkbenchLayoutService, Parts } from '../../../services/layout/browser/layoutService.js';
-import { INativeHostService } from '../../../../platform/native/common/native.js';
+import { INativeHostService, IWindowTabInfo } from '../../../../platform/native/common/native.js';
 import { hasNativeTitlebar, useWindowControlsOverlay, DEFAULT_CUSTOM_TITLEBAR_HEIGHT, hasNativeMenu } from '../../../../platform/window/common/window.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { Codicon } from '../../../../base/common/codicons.js';
@@ -30,16 +30,26 @@ import { IKeybindingService } from '../../../../platform/keybinding/common/keybi
 import { CodeWindow, mainWindow } from '../../../../base/browser/window.js';
 import { IsWindowAlwaysOnTopContext } from '../../../common/contextkeys.js';
 
+const WINDOW_TAB_STRIP_HEIGHT = 28;
+
 export class NativeTitlebarPart extends BrowserTitlebarPart {
 
 	//#region IView
 
 	override get minimumHeight(): number {
+		return this.titlebarHeight + this.windowTabStripHeight;
+	}
+
+	private get titlebarHeight(): number {
 		if (!isMacintosh) {
 			return super.minimumHeight;
 		}
 
 		return (this.isCommandCenterVisible ? DEFAULT_CUSTOM_TITLEBAR_HEIGHT : this.macTitlebarSize) / (this.preventZoom ? getZoomFactor(getWindow(this.element)) : 1);
+	}
+
+	private get windowTabStripHeight(): number {
+		return (this.windowTabs?.length ?? 0) > 1 ? WINDOW_TAB_STRIP_HEIGHT : 0;
 	}
 	override get maximumHeight(): number { return this.minimumHeight; }
 
@@ -53,6 +63,10 @@ export class NativeTitlebarPart extends BrowserTitlebarPart {
 	}
 
 	//#endregion
+
+	private windowTabs: readonly IWindowTabInfo[] = [];
+	private windowTabStrip: HTMLElement | undefined;
+	private readonly windowTabsEnabled: boolean;
 
 	private maxRestoreControl: HTMLElement | undefined;
 	private resizer: HTMLElement | undefined;
@@ -83,8 +97,47 @@ export class NativeTitlebarPart extends BrowserTitlebarPart {
 		super(id, targetWindow, editorGroupsContainer, contextMenuService, configurationService, environmentService, instantiationService, themeService, storageService, layoutService, contextKeyService, hostService, editorService, menuService, keybindingService, actionViewItemService);
 
 		this.tahoeOrNewer = isTahoeOrNewer(environmentService.os.release);
+		this.windowTabsEnabled = isWindows && targetWindow === mainWindow && configurationService.getValue('window.nativeTabs') === true;
 
 		this.handleWindowsAlwaysOnTop(targetWindow.vscodeWindowId);
+	}
+
+	protected override createContentArea(parent: HTMLElement): HTMLElement {
+		const content = super.createContentArea(parent);
+
+		if (this.windowTabsEnabled) {
+			this.windowTabStrip = append(parent, $('.titlebar-window-tabs'));
+			this._register(this.nativeHostService.onDidChangeWindowTabs(() => this.refreshWindowTabs()));
+			this.refreshWindowTabs();
+		}
+
+		return content;
+	}
+
+	private async refreshWindowTabs(): Promise<void> {
+		const strip = this.windowTabStrip;
+		if (!strip) {
+			return;
+		}
+
+		const tabs = await this.nativeHostService.getWindowTabs();
+		const heightChanged = (tabs.length > 1) !== (this.windowTabs.length > 1);
+		this.windowTabs = tabs;
+
+		strip.textContent = '';
+		for (const tab of tabs) {
+			const element = append(strip, $('.window-tab'));
+			element.classList.toggle('active', tab.active);
+			element.textContent = tab.title;
+			element.title = tab.title;
+			this._register(addDisposableListener(element, EventType.MOUSE_DOWN, () => this.nativeHostService.activateWindowTab(tab.windowId)));
+		}
+
+		this.element.classList.toggle('has-window-tabs', tabs.length > 1);
+
+		if (heightChanged) {
+			this._onDidChange.fire(undefined);
+		}
 	}
 
 	private async handleWindowsAlwaysOnTop(targetWindowId: number): Promise<void> {

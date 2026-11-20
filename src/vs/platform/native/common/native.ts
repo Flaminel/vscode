@@ -281,6 +281,12 @@ export interface INativeSystemWideKeybindingResult {
 	readonly failed: string[];
 }
 
+export interface IWindowTabInfo {
+	readonly windowId: number;
+	readonly title: string;
+	readonly active: boolean;
+}
+
 export interface ICommonNativeHostService {
 
 	readonly _serviceBrand: undefined;
@@ -299,6 +305,8 @@ export interface ICommonNativeHostService {
 
 	readonly onDidChangeWindowFullScreen: Event<{ windowId: number; fullscreen: boolean }>;
 	readonly onDidChangeWindowAlwaysOnTop: Event<{ windowId: number; alwaysOnTop: boolean }>;
+
+	readonly onDidChangeWindowTabs: Event<void>;
 
 	readonly onDidFocusMainOrAuxiliaryWindow: Event<number>;
 	readonly onDidBlurMainOrAuxiliaryWindow: Event<number>;
@@ -387,6 +395,8 @@ export interface ICommonNativeHostService {
 	setWindowIgnoreMouseEvents(ignore: boolean, options?: INativeHostOptions): Promise<void>;
 
 	isWindowAlwaysOnTop(options?: INativeHostOptions): Promise<boolean>;
+	getWindowTabs(): Promise<IWindowTabInfo[]>;
+	activateWindowTab(tabWindowId: number): Promise<void>;
 	toggleWindowAlwaysOnTop(options?: INativeHostOptions): Promise<void>;
 	setWindowAlwaysOnTop(alwaysOnTop: boolean, options?: INativeHostOptions): Promise<void>;
 

@@ -48,6 +48,8 @@ jobs:
 
       - name: Package
         run: pnpm run gulp vscode-win32-x64-min
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Zip package
         shell: pwsh

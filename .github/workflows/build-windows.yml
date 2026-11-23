@@ -1,0 +1,56 @@
+name: Build Windows package
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - native-tabs
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    env:
+      VSCODE_ARCH: x64
+      npm_config_arch: x64
+      ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+      NODE_OPTIONS: --max-old-space-size=8192
+    steps:
+      - name: Enable long paths
+        run: git config --system core.longpaths true
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+
+      - name: Run preinstall
+        run: pnpm run preinstall
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Package
+        run: pnpm run gulp vscode-win32-x64-min
+
+      - name: Zip package
+        shell: pwsh
+        run: Compress-Archive -Path "..\VSCode-win32-x64\*" -DestinationPath "$env:RUNNER_TEMP\VSCode-win32-x64.zip" -CompressionLevel Fastest
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: VSCode-win32-x64
+          path: ${{ runner.temp }}\VSCode-win32-x64.zip
+          compression-level: 0
+          retention-days: 7

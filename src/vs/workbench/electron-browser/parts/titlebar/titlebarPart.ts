@@ -102,18 +102,6 @@ export class NativeTitlebarPart extends BrowserTitlebarPart {
 		this.handleWindowsAlwaysOnTop(targetWindow.vscodeWindowId);
 	}
 
-	protected override createContentArea(parent: HTMLElement): HTMLElement {
-		const content = super.createContentArea(parent);
-
-		if (this.windowTabsEnabled) {
-			this.windowTabStrip = append(parent, $('.titlebar-window-tabs'));
-			this._register(this.nativeHostService.onDidChangeWindowTabs(() => this.refreshWindowTabs()));
-			this.refreshWindowTabs();
-		}
-
-		return content;
-	}
-
 	private async refreshWindowTabs(): Promise<void> {
 		const strip = this.windowTabStrip;
 		if (!strip) {
@@ -277,6 +265,12 @@ export class NativeTitlebarPart extends BrowserTitlebarPart {
 				const zoomFactor = getZoomFactor(getWindow(this.element));
 				this.onContextMenu(new MouseEvent(EventType.MOUSE_UP, { clientX: x / zoomFactor, clientY: y / zoomFactor }), MenuId.TitleBarContext);
 			}));
+		}
+
+		if (this.windowTabsEnabled) {
+			this.windowTabStrip = append(parent, $('.titlebar-window-tabs'));
+			this._register(this.nativeHostService.onDidChangeWindowTabs(() => this.refreshWindowTabs()));
+			this.refreshWindowTabs();
 		}
 
 		return result;

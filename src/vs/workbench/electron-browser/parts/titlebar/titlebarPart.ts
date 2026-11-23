@@ -4,6 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Event } from '../../../../base/common/event.js';
+import { DisposableStore } from '../../../../base/common/lifecycle.js';
+import { localize } from '../../../../nls.js';
 import { getZoomFactor } from '../../../../base/browser/browser.js';
 import { $, addDisposableListener, append, EventType, getWindow, getWindowId, hide, show } from '../../../../base/browser/dom.js';
 import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
@@ -31,6 +33,7 @@ import { CodeWindow, mainWindow } from '../../../../base/browser/window.js';
 import { IsWindowAlwaysOnTopContext } from '../../../common/contextkeys.js';
 
 const WINDOW_TAB_STRIP_HEIGHT = 28;
+const WINDOW_TAB_DRAG_TYPE = 'text/x-vscode-window-tab';
 
 export class NativeTitlebarPart extends BrowserTitlebarPart {
 
@@ -49,7 +52,7 @@ export class NativeTitlebarPart extends BrowserTitlebarPart {
 	}
 
 	private get windowTabStripHeight(): number {
-		return (this.windowTabs?.length ?? 0) > 1 ? WINDOW_TAB_STRIP_HEIGHT : 0;
+		return (this.windowTabs?.length ?? 0) >= 1 ? WINDOW_TAB_STRIP_HEIGHT : 0;
 	}
 	override get maximumHeight(): number { return this.minimumHeight; }
 
@@ -66,6 +69,7 @@ export class NativeTitlebarPart extends BrowserTitlebarPart {
 
 	private windowTabs: readonly IWindowTabInfo[] = [];
 	private windowTabStrip: HTMLElement | undefined;
+	private readonly windowTabDisposables = this._register(new DisposableStore());
 	private readonly windowTabsEnabled: boolean;
 
 	private maxRestoreControl: HTMLElement | undefined;
@@ -109,19 +113,54 @@ export class NativeTitlebarPart extends BrowserTitlebarPart {
 		}
 
 		const tabs = await this.nativeHostService.getWindowTabs();
-		const heightChanged = (tabs.length > 1) !== (this.windowTabs.length > 1);
+		const heightChanged = (tabs.length >= 1) !== (this.windowTabs.length >= 1);
 		this.windowTabs = tabs;
 
+		this.windowTabDisposables.clear();
 		strip.textContent = '';
-		for (const tab of tabs) {
+		tabs.forEach((tab, index) => {
 			const element = append(strip, $('.window-tab'));
 			element.classList.toggle('active', tab.active);
-			element.textContent = tab.title;
+			element.draggable = true;
 			element.title = tab.title;
-			this._register(addDisposableListener(element, EventType.MOUSE_DOWN, () => this.nativeHostService.activateWindowTab(tab.windowId)));
-		}
 
-		this.element.classList.toggle('has-window-tabs', tabs.length > 1);
+			const label = append(element, $('span.window-tab-label'));
+			label.textContent = tab.title;
+
+			const close = append(element, $('span.window-tab-close' + ThemeIcon.asCSSSelector(Codicon.close)));
+
+			this.windowTabDisposables.add(addDisposableListener(element, EventType.MOUSE_DOWN, e => {
+				if (e.button === 1) {
+					e.preventDefault();
+					this.nativeHostService.closeWindowTab(tab.windowId);
+				} else if (e.button === 0 && e.target !== close) {
+					this.nativeHostService.activateWindowTab(tab.windowId);
+				}
+			}));
+			this.windowTabDisposables.add(addDisposableListener(close, EventType.MOUSE_DOWN, e => {
+				e.stopPropagation();
+				this.nativeHostService.closeWindowTab(tab.windowId);
+			}));
+			this.windowTabDisposables.add(addDisposableListener(element, EventType.DRAG_START, e => {
+				e.dataTransfer?.setData(WINDOW_TAB_DRAG_TYPE, String(tab.windowId));
+			}));
+			this.windowTabDisposables.add(addDisposableListener(element, EventType.DRAG_OVER, e => {
+				e.preventDefault();
+			}));
+			this.windowTabDisposables.add(addDisposableListener(element, EventType.DROP, e => {
+				e.preventDefault();
+				const draggedId = Number(e.dataTransfer?.getData(WINDOW_TAB_DRAG_TYPE));
+				if (draggedId && draggedId !== tab.windowId) {
+					this.nativeHostService.moveWindowTab(draggedId, index);
+				}
+			}));
+		});
+
+		const add = append(strip, $('.window-tab-new' + ThemeIcon.asCSSSelector(Codicon.add)));
+		add.title = localize('newWindowTab', "New Window Tab");
+		this.windowTabDisposables.add(addDisposableListener(add, EventType.MOUSE_DOWN, () => this.nativeHostService.newWindowTab()));
+
+		this.element.classList.toggle('has-window-tabs', tabs.length >= 1);
 
 		if (heightChanged) {
 			this._onDidChange.fire(undefined);

@@ -88,6 +88,7 @@ export class TestNativeHostService implements INativeHostService {
 	readonly onDidTriggerWindowSystemContextMenu: Event<{ windowId: number; x: number; y: number }> = Event.None;
 	onDidChangeWindowFullScreen = Event.None;
 	onDidChangeWindowAlwaysOnTop = Event.None;
+	onDidChangeWindowTabs = Event.None;
 	onDidChangeDisplay = Event.None;
 	onDidChangeGPUCompositing = Event.None;
 
@@ -126,6 +127,10 @@ export class TestNativeHostService implements INativeHostService {
 	async minimizeWindow(): Promise<void> { }
 	async moveWindowTop(options?: INativeHostOptions): Promise<void> { }
 	async isWindowAlwaysOnTop(options?: INativeHostOptions): Promise<boolean> { return false; }
+	async getWindowTabs(): Promise<never[]> { return []; }
+	async activateWindowTab(tabWindowId: number): Promise<void> { }
+	async moveWindowTab(tabWindowId: number, index: number): Promise<void> { }
+	async closeWindowTab(tabWindowId: number): Promise<void> { }
 	async toggleWindowAlwaysOnTop(options?: INativeHostOptions): Promise<void> { }
 	async setWindowAlwaysOnTop(alwaysOnTop: boolean, options?: INativeHostOptions): Promise<void> { }
 	async setWindowFolderLocation(folderLocation: IWindowFolderLocation | undefined, options?: INativeHostOptions): Promise<void> { }

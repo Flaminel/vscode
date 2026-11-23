@@ -507,6 +507,21 @@ export class NativeHostMainService extends Disposable implements INativeHostMain
 		}
 	}
 
+	async moveWindowTab(windowId: number | undefined, tabWindowId: number, index: number): Promise<void> {
+		const tab = this.windowsMainService.getWindowById(tabWindowId);
+		if (tab) {
+			this.windowsMainService.windowTabs.move(tab, index);
+		}
+	}
+
+	async closeWindowTab(windowId: number | undefined, tabWindowId: number): Promise<void> {
+		const tab = this.windowsMainService.getWindowById(tabWindowId);
+		if (tab) {
+			this.windowsMainService.windowTabs.activate(tab);
+			tab.close();
+		}
+	}
+
 	async toggleWindowAlwaysOnTop(windowId: number | undefined, options?: INativeHostOptions): Promise<void> {
 		const window = this.windowById(options?.targetWindowId, windowId);
 		window?.win?.setAlwaysOnTop(!window.win.isAlwaysOnTop());

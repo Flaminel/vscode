@@ -12,6 +12,7 @@ export class WindowTabs {
 	readonly onDidChange = this._onDidChange.event;
 
 	private readonly groups: ICodeWindow[][] = [];
+	private readonly tracked = new WeakSet<ICodeWindow>();
 
 	getTabs(window: ICodeWindow): readonly ICodeWindow[] {
 		return this.findGroup(window) ?? [window];
@@ -25,6 +26,8 @@ export class WindowTabs {
 		}
 
 		group.push(window);
+		this.track(anchor);
+		this.track(window);
 		this._onDidChange.fire();
 
 		this.matchBounds(anchor, window);
@@ -55,6 +58,17 @@ export class WindowTabs {
 		this._onDidChange.fire();
 	}
 
+	move(window: ICodeWindow, index: number): void {
+		const group = this.findGroup(window);
+		if (!group) {
+			return;
+		}
+
+		group.splice(group.indexOf(window), 1);
+		group.splice(Math.max(0, Math.min(index, group.length)), 0, window);
+		this._onDidChange.fire();
+	}
+
 	remove(window: ICodeWindow): void {
 		const group = this.findGroup(window);
 		if (!group) {
@@ -75,6 +89,15 @@ export class WindowTabs {
 		if (wasVisible && next) {
 			this.activate(next);
 		}
+	}
+
+	private track(window: ICodeWindow): void {
+		if (!window.win || this.tracked.has(window)) {
+			return;
+		}
+
+		this.tracked.add(window);
+		window.win.on('page-title-updated', () => this._onDidChange.fire());
 	}
 
 	private findGroup(window: ICodeWindow): ICodeWindow[] | undefined {

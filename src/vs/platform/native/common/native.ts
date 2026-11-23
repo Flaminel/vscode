@@ -397,6 +397,8 @@ export interface ICommonNativeHostService {
 	isWindowAlwaysOnTop(options?: INativeHostOptions): Promise<boolean>;
 	getWindowTabs(): Promise<IWindowTabInfo[]>;
 	activateWindowTab(tabWindowId: number): Promise<void>;
+	moveWindowTab(tabWindowId: number, index: number): Promise<void>;
+	closeWindowTab(tabWindowId: number): Promise<void>;
 	toggleWindowAlwaysOnTop(options?: INativeHostOptions): Promise<void>;
 	setWindowAlwaysOnTop(alwaysOnTop: boolean, options?: INativeHostOptions): Promise<void>;
 
